@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#2b1d5c">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Piyano Öğren</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
+body{margin:0;background:#2b1d5c;color:#fff;font-family:system-ui,sans-serif;height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+h1{margin:12px;font-size:22px;text-align:center}
+#menu{flex:1;overflow:auto;padding:8px 14px}
+.card{background:#42308a;border-radius:14px;padding:14px;margin:10px 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.card small{opacity:.75;display:block;margin-top:3px}
+#game{display:none;flex:1;flex-direction:column}
+#top{display:flex;justify-content:space-between;padding:10px 14px;align-items:center}
+button{background:#ffb703;border:0;border-radius:10px;padding:8px 14px;font-weight:700;font-size:15px}
+#msg{text-align:center;font-size:20px;min-height:60px;padding:6px 14px}
+#big{font-size:64px;text-align:center;font-weight:800;min-height:84px}
+#bar{height:8px;background:#ffffff33;margin:0 14px;border-radius:4px}#bar i{display:block;height:100%;width:0;background:#06d6a0;border-radius:4px;transition:.2s}
+#kb{position:relative;display:flex;height:48vh;max-height:340px;margin:auto 4px 8px}
+.w{flex:1;background:#fff;border:1px solid #888;border-radius:0 0 8px 8px;color:#333;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-weight:700;font-size:13px}
+.b{position:absolute;top:0;width:6%;height:60%;background:#111;border-radius:0 0 6px 6px;z-index:2;color:#bbb;font-size:10px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+.w.on{background:#ffd166}.b.on{background:#555}
+.w.hint,.b.hint{box-shadow:inset 0 0 0 4px #06d6a0;background:#b9fbe7}.b.hint{background:#06a77d}
+.shake{animation:s .25s}@keyframes s{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+</style></head><body>
+<h1>🎹 Piyano Öğren</h1>
+<div id="menu"></div>
+<div id="game">
+ <div id="top"><button onclick="home()">← Geri</button><span id="stars"></span></div>
+ <div id="msg"></div><div id="big"></div><div id="bar"><i></i></div>
+ <div id="kb"></div>
+</div>
+<script>
+const TR=['Do','Re','Mi','Fa','Sol','La','Si'];
+// whites: C4..E5
+const W=[0,2,4,5,7,9,11,12,14,16], BL={0:1,1:3,3:6,4:8,5:10,7:13,8:15};
+const nm=s=>{const o=s%12,i=[0,2,4,5,7,9,11].indexOf(o);return i>=0?TR[i]:TR[[0,1,3,4,5][[1,3,6,8,10].indexOf(o)]]+'♯'};
+const N={Do:0,Re:2,Mi:4,Fa:5,Sol:7,La:9,Si:11,Do2:12,Re2:14,Mi2:16};
+const seq=s=>s.split(' ').map(x=>N[x]);
+const L=[
+{t:'1. Tuşları Tanı',d:'Do Re Mi Fa Sol La Si',k:'learn',s:seq('Do Re Mi Fa Sol La Si Do2'),tip:'Yeşil tuşa bas. Beyaz tuşlar 7 notadır: Do Re Mi Fa Sol La Si. İki siyah tuşun solundaki beyaz tuş = Do!'},
+{t:'2. Beş Parmak',d:'Yukarı çık, aşağı in',k:'learn',s:seq('Do Re Mi Fa Sol Fa Mi Re Do'),tip:'Sağ elini Do üzerine koy: 1.parmak (baş) Do, 2 Re, 3 Mi, 4 Fa, 5 (serçe) Sol.'},
+{t:'3. Küçük Kuzu',d:'İlk şarkın',k:'learn',s:seq('Mi Re Do Re Mi Mi Mi Re Re Re Mi Sol Sol'),tip:'Yavaş çal, acele etme. Doğru bilince hızlanırsın.'},
+{t:'4. Teke Teke Yıldız',d:'Ünlü çocuk şarkısı',k:'learn',s:seq('Do Do Sol Sol La La Sol Fa Fa Mi Mi Re Re Do'),tip:'Sol → La atlayışına dikkat: aradaki tuşları atla.'},
+{t:'5. Neşeye Övgü',d:'Beethoven',k:'learn',s:seq('Mi Mi Fa Sol Sol Fa Mi Re Do Do Re Mi Mi Re Re'),tip:'Klasik müzik çalıyorsun, tebrikler!'},
+{t:'6. Nota Bulma Oyunu',d:'Söylenen notayı bul (10 soru)',k:'find'},
+{t:'7. Serbest Çal',d:'Siyah tuşlar dahil özgürce dene',k:'free'}];
+let AC,cur,idx,sc,ans,prog=JSON.parse(localStorage.getItem('piyano')||'{}');
+function tone(s,d=.9){AC=AC||new(AudioContext||webkitAudioContext)();AC.resume();
+ const f=261.63*2**(s/12),t=AC.currentTime,g=AC.createGain();g.connect(AC.destination);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.35,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+d);
+ [['triangle',1],['sine',2]].forEach(([ty,m])=>{const o=AC.createOscillator();o.type=ty;o.frequency.value=f*m;o.connect(g);o.start(t);o.stop(t+d)})}
+const $=q=>document.querySelector(q),kb=$('#kb');
+function build(labels){kb.innerHTML='';W.forEach((s,i)=>{const e=document.createElement('div');e.className='w';e.dataset.s=s;e.textContent=labels?nm(s):'';kb.appendChild(e);
+ if(BL[i]!=null){const b=document.createElement('div');b.className='b';b.dataset.s=BL[i];b.style.left=((i+1)*10-3)+'%';b.textContent=labels?nm(BL[i]).replace('♯','#'):'';kb.appendChild(b)}})}
+kb.addEventListener('pointerdown',e=>{const k=e.target.closest('[data-s]');if(!k)return;e.preventDefault();press(+k.dataset.s,k)});
+function press(s,k){tone(s);k.classList.add('on');setTimeout(()=>k.classList.remove('on'),150);if(!cur)return;
+ if(cur.k==='learn'){if(s===cur.s[idx]){idx++;next()}else{k.classList.add('shake');setTimeout(()=>k.classList.remove('shake'),250);$('#msg').textContent='Yanlış tuş, yeşili dene 🙂'}}
+ else if(cur.k==='find'&&ans!=null){if(nm(s)===nm(ans)){sc++;$('#msg').textContent='✅ Doğru!'}else $('#msg').textContent='❌ Bu '+nm(s)+' idi, aranan '+nm(ans);idx++;ans=null;setTimeout(next,900)}}
+function hint(s){document.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'));if(s!=null)document.querySelector(`[data-s="${s}"]`).classList.add('hint')}
+function next(){const bar=$('#bar i');
+ if(cur.k==='learn'){bar.style.width=idx/cur.s.length*100+'%';
+  if(idx>=cur.s.length){hint();$('#big').textContent='🎉';$('#msg').textContent='Harika! Lesson tamam.';prog[cur.t]=3;localStorage.setItem('piyano',JSON.stringify(prog));return}
+  hint(cur.s[idx]);$('#big').textContent=nm(cur.s[idx]);if(idx>0)$('#msg').textContent='Güzel! Devam 👍'}
+ else if(cur.k==='find'){bar.style.width=idx*10+'%';
+  if(idx>=10){const st=sc>=9?3:sc>=6?2:1;$('#big').textContent='⭐'.repeat(st);$('#msg').textContent=sc+'/10 doğru!';prog[cur.t]=Math.max(prog[cur.t]||0,st);localStorage.setItem('piyano',JSON.stringify(prog));return}
+  ans=W[Math.random()*10|0];$('#big').textContent=nm(ans);$('#msg').textContent='Bu notayı bul ve bas! ('+(idx+1)+'/10)';setTimeout(()=>tone(ans),200)}}
+function start(i){cur=L[i];idx=0;sc=0;ans=null;$('#menu').style.display='none';$('#game').style.display='flex';$('#bar i').style.width=0;
+ build(cur.k!=='find');$('#stars').textContent='';$('#big').textContent='';
+ if(cur.k==='free'){$('#msg').textContent='Dilediğin tuşa bas. Siyah tuşlar ♯ (diyez) notalarıdır.';hint();return}
+ $('#msg').textContent=cur.tip||'';if(cur.k==='find')setTimeout(next,1500);else next()}
+function home(){cur=null;$('#menu').style.display='block';$('#game').style.display='none';draw()}
+function draw(){$('#menu').innerHTML=L.map((l,i)=>`<div class="card" onclick="start(${i})"><div><b>${l.t}</b><small>${l.d}</small></div><span>${'⭐'.repeat(prog[l.t]||0)||'▶'}</span></div>`).join('')}
+draw();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>
