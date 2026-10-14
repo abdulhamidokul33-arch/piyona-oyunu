@@ -17,19 +17,27 @@ h1{margin:12px;font-size:22px;text-align:center}
 #top{display:flex;justify-content:space-between;padding:10px 14px;align-items:center}
 button{background:#ffb703;border:0;border-radius:10px;padding:8px 14px;font-weight:700;font-size:15px}
 #msg{text-align:center;font-size:20px;min-height:60px;padding:6px 14px}
-#big{font-size:64px;text-align:center;font-weight:800;min-height:84px}
+#big{font-size:60px;text-align:center;font-weight:800;min-height:70px}
 #bar{height:8px;background:#ffffff33;margin:0 14px;border-radius:4px}#bar i{display:block;height:100%;width:0;background:#06d6a0;border-radius:4px;transition:.2s}
-#kb{position:relative;display:flex;height:48vh;max-height:340px;margin:auto 4px 8px}
+#kb{position:relative;display:flex;flex:1;min-height:0;margin:6px 4px}
 .w{flex:1;background:#fff;border:1px solid #888;border-radius:0 0 8px 8px;color:#333;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-weight:700;font-size:13px}
 .b{position:absolute;top:0;width:6%;height:60%;background:#111;border-radius:0 0 6px 6px;z-index:2;color:#bbb;font-size:10px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
 .w.on{background:#ffd166}.b.on{background:#555}
-.w.hint,.b.hint{box-shadow:inset 0 0 0 4px #06d6a0;background:#b9fbe7}.b.hint{background:#06a77d}
+.w.hint,.b.hint{background:#06d6a0!important;color:#000;box-shadow:inset 0 0 0 5px #00a67e;animation:p .6s infinite alternate}@keyframes p{to{filter:brightness(1.3)}}
+#nx.go{background:#06d6a0;color:#000;animation:p .6s infinite alternate}
+#foot{padding:8px 14px;text-align:center;background:#1d1340}#foot button{width:100%;max-width:420px;padding:14px;font-size:17px}
+#rot{display:none;position:fixed;inset:0;background:#2b1d5c;z-index:9;align-items:center;justify-content:center;text-align:center;font-size:24px;padding:30px}
+@media(orientation:portrait) and (max-width:700px){#rot{display:flex}}
+@media(orientation:landscape){h1{font-size:18px;margin:6px}#menu{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}.card{margin:0}#big{font-size:44px;min-height:54px}#msg{min-height:30px;font-size:16px;padding:2px 14px}#top{padding:4px 14px}}
 .shake{animation:s .25s}@keyframes s{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 </style></head><body>
 <h1>🎹 Piyano Öğren</h1>
+<div id="rot">📱↪️<br>Telefonu yatay çevir</div>
+<div id="ios" style="display:none;font-size:14px;padding:6px 14px;text-align:center">iPhone: Safari'de <b>Paylaş</b> ⬆️ → <b>Ana Ekrana Ekle</b></div>
 <div id="menu"></div>
+<div id="foot"><button id="inst" onclick="doInstall()">📲 Telefona İndir</button></div>
 <div id="game">
- <div id="top"><button onclick="home()">← Geri</button><span id="stars"></span></div>
+ <div id="top"><button onclick="home()">← Geri</button><span id="stars"></span><button id="nx" onclick="nextLevel()">Sonraki Ders ➡</button></div>
  <div id="msg"></div><div id="big"></div><div id="bar"><i></i></div>
  <div id="kb"></div>
 </div>
@@ -41,7 +49,7 @@ const nm=s=>{const o=s%12,i=[0,2,4,5,7,9,11].indexOf(o);return i>=0?TR[i]:TR[[0,
 const N={Do:0,Re:2,Mi:4,Fa:5,Sol:7,La:9,Si:11,Do2:12,Re2:14,Mi2:16};
 const seq=s=>s.split(' ').map(x=>N[x]);
 const L=[
-{t:'1. Tuşları Tanı',d:'Do Re Mi Fa Sol La Si',k:'learn',s:seq('Do Re Mi Fa Sol La Si Do2'),tip:'Yeşil tuşa bas. Beyaz tuşlar 7 notadır: Do Re Mi Fa Sol La Si. İki siyah tuşun solundaki beyaz tuş = Do!'},
+{t:'1. Tuşları Tanı',d:'Do Re Mi Fa Sol La Si',k:'learn',s:seq('Do Re Mi Fa Sol La Si Do2'),tip:'Yanıp sönen YEŞİL tuşa bas. Beyaz tuşlar 7 notadır: Do Re Mi Fa Sol La Si. İki siyah tuşun solundaki beyaz tuş = Do!'},
 {t:'2. Beş Parmak',d:'Yukarı çık, aşağı in',k:'learn',s:seq('Do Re Mi Fa Sol Fa Mi Re Do'),tip:'Sağ elini Do üzerine koy: 1.parmak (baş) Do, 2 Re, 3 Mi, 4 Fa, 5 (serçe) Sol.'},
 {t:'3. Küçük Kuzu',d:'İlk şarkın',k:'learn',s:seq('Mi Re Do Re Mi Mi Mi Re Re Re Mi Sol Sol'),tip:'Yavaş çal, acele etme. Doğru bilince hızlanırsın.'},
 {t:'4. Teke Teke Yıldız',d:'Ünlü çocuk şarkısı',k:'learn',s:seq('Do Do Sol Sol La La Sol Fa Fa Mi Mi Re Re Do'),tip:'Sol → La atlayışına dikkat: aradaki tuşları atla.'},
@@ -63,16 +71,25 @@ function press(s,k){tone(s);k.classList.add('on');setTimeout(()=>k.classList.rem
 function hint(s){document.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'));if(s!=null)document.querySelector(`[data-s="${s}"]`).classList.add('hint')}
 function next(){const bar=$('#bar i');
  if(cur.k==='learn'){bar.style.width=idx/cur.s.length*100+'%';
-  if(idx>=cur.s.length){hint();$('#big').textContent='🎉';$('#msg').textContent='Harika! Lesson tamam.';prog[cur.t]=3;localStorage.setItem('piyano',JSON.stringify(prog));return}
+  if(idx>=cur.s.length){hint();$('#big').textContent='🎉';$('#msg').textContent='Harika! Ders tamam. Sonrakine geç ➡';$('#nx').classList.add('go');prog[cur.t]=3;localStorage.setItem('piyano',JSON.stringify(prog));return}
   hint(cur.s[idx]);$('#big').textContent=nm(cur.s[idx]);if(idx>0)$('#msg').textContent='Güzel! Devam 👍'}
  else if(cur.k==='find'){bar.style.width=idx*10+'%';
-  if(idx>=10){const st=sc>=9?3:sc>=6?2:1;$('#big').textContent='⭐'.repeat(st);$('#msg').textContent=sc+'/10 doğru!';prog[cur.t]=Math.max(prog[cur.t]||0,st);localStorage.setItem('piyano',JSON.stringify(prog));return}
+  if(idx>=10){const st=sc>=9?3:sc>=6?2:1;$('#big').textContent='⭐'.repeat(st);$('#msg').textContent=sc+'/10 doğru! Sonrakine geç ➡';$('#nx').classList.add('go');prog[cur.t]=Math.max(prog[cur.t]||0,st);localStorage.setItem('piyano',JSON.stringify(prog));return}
   ans=W[Math.random()*10|0];$('#big').textContent=nm(ans);$('#msg').textContent='Bu notayı bul ve bas! ('+(idx+1)+'/10)';setTimeout(()=>tone(ans),200)}}
-function start(i){cur=L[i];idx=0;sc=0;ans=null;$('#menu').style.display='none';$('#game').style.display='flex';$('#bar i').style.width=0;
+function start(i){cur=L[i];const f=$('#foot');if(f)f.style.display='none';$('#nx').classList.remove('go');
+ if(!sa&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().then(()=>screen.orientation.lock('landscape')).catch(()=>{});
+idx=0;sc=0;ans=null;$('#menu').style.display='none';$('#game').style.display='flex';$('#bar i').style.width=0;
  build(cur.k!=='find');$('#stars').textContent='';$('#big').textContent='';
  if(cur.k==='free'){$('#msg').textContent='Dilediğin tuşa bas. Siyah tuşlar ♯ (diyez) notalarıdır.';hint();return}
  $('#msg').textContent=cur.tip||'';if(cur.k==='find')setTimeout(next,1500);else next()}
-function home(){cur=null;$('#menu').style.display='block';$('#game').style.display='none';draw()}
+function home(){cur=null;$('#menu').style.display='';$('#game').style.display='none';const f=$('#foot');if(f)f.style.display='';draw()}
 function draw(){$('#menu').innerHTML=L.map((l,i)=>`<div class="card" onclick="start(${i})"><div><b>${l.t}</b><small>${l.d}</small></div><span>${'⭐'.repeat(prog[l.t]||0)||'▶'}</span></div>`).join('')}
+let dp;const sa=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+if(sa)$('#foot').remove();
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});
+addEventListener('appinstalled',()=>{const f=$('#foot');f&&f.remove()});
+function doInstall(){if(dp){dp.prompt();dp=null}else alert(/iphone|ipad/i.test(navigator.userAgent)?'Safari: Paylaş ⬆️ → Ana Ekrana Ekle':'Chrome: sağ üst ⋮ menü → "Uygulamayı yükle" veya "Ana ekrana ekle"')}
+if(/iphone|ipad/i.test(navigator.userAgent)&&!sa)$('#ios').style.display='block';
+function nextLevel(){const i=L.indexOf(cur)+1;i<L.length?start(i):home()}
 draw();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
